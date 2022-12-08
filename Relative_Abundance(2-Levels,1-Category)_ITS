@@ -1,0 +1,65 @@
+library(ggplot2)
+library(stringr)
+library(stringi)
+
+setwd("~/Desktop/sueyoshi/for_r/data_YAKUSHIMA/results/for_ITS")
+ASV.table <- read.table(file="rarefied_ASV_table.txt",header=T)
+
+# % table
+ASV <- ASV.table [,1:(ncol(ASV.table)-7)]
+taxonomy <- ASV.table [,(ncol(ASV.table)-6):ncol(ASV.table)]
+percent <- ASV / mean(colSums(ASV)) *100
+# Remove "p__" and "c__" before phylum name
+taxonomy <- data.frame(lapply(taxonomy, function(x){gsub(pattern="p__", replacement = "", x)}),stringsAsFactors = FALSE)
+taxonomy <- data.frame(lapply(taxonomy, function(x){gsub(pattern="c__", replacement = "", x)}),stringsAsFactors = FALSE)
+
+# >1% phylum table
+phylum.ag <- aggregate(percent, by=list(taxonomy$Phylum),FUN = sum,na.rm=F)
+row.names(phylum.ag)<- phylum.ag[,1]
+phylum.ag <- phylum.ag[,-1]
+phylum.ag <- data.frame(phylum.ag)
+rowMeans <- rowMeans(phylum.ag)
+phylum.ag <- cbind(phylum.ag,rowMeans)
+major.phylum <- phylum.ag[phylum.ag[,"rowMeans"] > 1,]
+major.phylum <- major.phylum[order(major.phylum$rowMeans,decreasing = T),]
+minor.phylum <- phylum.ag[phylum.ag[,"rowMeans"] < 1,]
+others <- colSums (minor.phylum)
+selected.phylum <- rbind (major.phylum, others) 
+rownames (selected.phylum)[nrow(selected.phylum)] <- "Others"
+selected.phylum <- selected.phylum[,-ncol(selected.phylum)]
+
+# >1% class in >10% class tables
+more.major.phylum <- phylum.ag[phylum.ag[,"rowMeans"] > 10,]
+more.major.phylum <- more.major.phylum[order(more.major.phylum$rowMeans,decreasing = T),]
+percent.table <- cbind (percent, taxonomy)
+class.list <- list()
+for (i in 1:nrow(more.major.phylum)){
+  subset <-subset(percent.table,percent.table$Phylum==rownames(more.major.phylum)[i])
+  class.list <- c(class.list, list(subset))}
+
+selected.class.list <- list()
+for (i in 1:length(class.list)){
+  class.ASV <- class.list[[i]][,1:(ncol(ASV.table)-7)]
+  class.taxonomy <- class.list[[i]][,(ncol(ASV.table)-6):ncol(ASV.table)]
+  class.ag <- aggregate(class.ASV, by=list(class.taxonomy$Class),FUN = sum,na.rm=F)
+  row.names(class.ag)<- class.ag[,1]
+  class.ag <- class.ag[,-1]
+  class.ag <- data.frame(class.ag)
+  rowMeans <- rowMeans(class.ag)
+  class.ag <- cbind(class.ag,rowMeans)
+  major.class <- class.ag[class.ag[,"rowMeans"] > 1,]
+  major.class <- major.class[order(major.class$rowMeans,decreasing = T),]
+  minor.class <- class.ag[class.ag[,"rowMeans"] < 1,]
+  other.class <- colSums (minor.class)
+  selected.class <- rbind (major.class, other.class) 
+  rownames (selected.class)[nrow(selected.class)] <- paste ("Other", rownames(more.major.phylum)[i],sep="_")
+  selected.class <- selected.class[,-ncol(selected.class)]
+  selected.class.list <- c(selected.class.list, list(selected.class))}
+
+# Make dataset
+phylum.class.table <- data.frame()
+for (i in 1:nrow(more.major.phylum)){
+  phylum.class.table <- rbind(phylum.class.table,selected.class.list[[i]])}
+phylum.class.table <- rbind (phylum.class.table, selected.phylum [((nrow(more.major.phylum)+1):nrow(selected.phylum)),])
+selected.t <- t (phylum.class.table)
+write.csv(selected.t, "aggregated.phylum.class.table.csv")
