@@ -1,0 +1,55 @@
+#In case you are R user here is the script for genera:
+library(readxl)
+
+#read in table of genera (Table S1 from the paper) from directory folder:
+
+genera=read_excel("~/data_YAKUSHIMA/for_Fungaltrait/table_s1_13225_2020_466_MOESM4_ESM.xlsx")
+str(genera)
+
+#read in genera names of your interest:
+mylist=read.table("~/data_YAKUSHIMA/results(DADA2~relative_abundance)/for_ITS/rarefied_ASV_table.txt")
+
+#接頭語を取り除く
+taxonomy <- mylist [,(ncol(mylist)-6):ncol(mylist)]
+# Remove "k__", "p__" and "c__" before phylum name
+taxonomy <- data.frame(lapply(taxonomy, function(x){gsub(pattern="k__", replacement = "", x)}),stringsAsFactors = FALSE)
+taxonomy <- data.frame(lapply(taxonomy, function(x){gsub(pattern="p__", replacement = "", x)}),stringsAsFactors = FALSE)
+taxonomy <- data.frame(lapply(taxonomy, function(x){gsub(pattern="c__", replacement = "", x)}),stringsAsFactors = FALSE)
+taxonomy <- data.frame(lapply(taxonomy, function(x){gsub(pattern="o__", replacement = "", x)}),stringsAsFactors = FALSE)
+taxonomy <- data.frame(lapply(taxonomy, function(x){gsub(pattern="f__", replacement = "", x)}),stringsAsFactors = FALSE)
+taxonomy <- data.frame(lapply(taxonomy, function(x){gsub(pattern="g__", replacement = "", x)}),stringsAsFactors = FALSE)
+taxonomy <- data.frame(lapply(taxonomy, function(x){gsub(pattern="s__", replacement = "", x)}),stringsAsFactors = FALSE)
+
+attach(taxonomy)
+#extraction by the column of names
+results=genera[genera$Family %in% taxonomy[[5]],]
+
+write.table(results, file="results.txt")
+
+#12.21_２ファイルを対応する列で結合する
+
+library(tidyverse)
+ASV.table <- read.table("~/Desktop/sueyoshi/for_r/data_YAKUSHIMA/results(DADA2~relative_abundance)/for_ITS/rarefied_ASV_table.txt")
+ASV.table <- data.frame(lapply(ASV.table, function(x){gsub(pattern="k__", replacement = "", x)}),stringsAsFactors = FALSE)
+ASV.table <- data.frame(lapply(ASV.table, function(x){gsub(pattern="p__", replacement = "", x)}),stringsAsFactors = FALSE)
+ASV.table <- data.frame(lapply(ASV.table, function(x){gsub(pattern="c__", replacement = "", x)}),stringsAsFactors = FALSE)
+ASV.table <- data.frame(lapply(ASV.table, function(x){gsub(pattern="o__", replacement = "", x)}),stringsAsFactors = FALSE)
+ASV.table <- data.frame(lapply(ASV.table, function(x){gsub(pattern="f__", replacement = "", x)}),stringsAsFactors = FALSE)
+ASV.table <- data.frame(lapply(ASV.table, function(x){gsub(pattern="g__", replacement = "", x)}),stringsAsFactors = FALSE)
+ASV.table <- data.frame(lapply(ASV.table, function(x){gsub(pattern="s__", replacement = "", x)}),stringsAsFactors = FALSE)
+
+general <- read_excel("~/Desktop/sueyoshi/for_r/data_YAKUSHIMA/for_Fungaltrait/table_s1_13225_2020_466_MOESM4_ESM.xlsx")
+inner_joined_data <- inner_join(ASV.table, general, by = c("Genus"="GENUS"))
+inner_joined_data
+
+write.table(inner_joined_data, file="joined_data")
+
+
+
+#extraction by the names (manually or semi-manually)やってない:
+mysubset <- genera[ genera$GENUS %in% c("Tomentella","Russula"), ]
+#create an output in desired format (csv, xlsx,txt...):
+write.table(results, file="results.txt")
+
+
+
