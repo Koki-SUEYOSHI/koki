@@ -89,6 +89,7 @@ rate = 1 # how many times shorter than acctual arrows
 options(ggrepel.max.overlaps = Inf)
 ggplot()+
   geom_point(data=data, aes(x=MDS1,y=MDS2, color = site, shape=tree),size=5)+
+  scale_color_brewer(palette = "Set2")+
   geom_segment(data=env.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
   # geom_segment(data=kingdom.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
   geom_segment(data=phylum.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="#404040")+
@@ -108,6 +109,7 @@ ggsave(file = "ITS_everything.png")
 rate = 1 # how many times shorter than acctual arrows
 options(ggrepel.max.overlaps = Inf)
 ggplot()+
+  scale_color_brewer(palette = "Set2")+
   geom_point(data=data, aes(x=MDS1,y=MDS2, color = site, shape=tree),size=5)+
   geom_segment(data=env.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
   # geom_segment(data=kingdom.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
@@ -123,6 +125,7 @@ ggsave(file = "ITS_everything_without_words.png")
 rate = 1 # how many times shorter than acctual arrows
 options(ggrepel.max.overlaps = Inf)
 ggplot()+
+  scale_color_brewer(palette = "Set2")+
   geom_point(data=data, aes(x=MDS1,y=MDS2, color = site, shape=tree),size=5)+
   # geom_segment(data=kingdom.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
   geom_segment(data=phylum.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="#404040")+
@@ -140,6 +143,7 @@ ggsave(file = "ITS_only_class.png")
 rate = 1 # how many times shorter than acctual arrows
 options(ggrepel.max.overlaps = Inf)
 ggplot()+
+  scale_color_brewer(palette = "Set2")+
   geom_point(data=data, aes(x=MDS1,y=MDS2, color = site, shape=tree),size=5)+
   # geom_segment(data=kingdom.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
   geom_segment(data=phylum.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="#404040")+
@@ -155,6 +159,7 @@ ggsave(file = "ITS_only_class_without_words.png")
 # ggplot_scores_only
 rate = 1 # how many times shorter than acctual arrows
 ggplot()+
+  scale_color_brewer(palette = "Set2")+
   geom_point(data=data, aes(x=MDS1,y=MDS2, color = site, shape=tree),size=5)+
   geom_segment(data=env.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
   # geom_segment(data=kingdom.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
@@ -169,6 +174,7 @@ ggsave(file = "ITS_scores_only.png")
 # without_words
 rate = 1 # how many times shorter than acctual arrows
 ggplot()+
+  scale_color_brewer(palette = "Set2")+
   geom_point(data=data, aes(x=MDS1,y=MDS2, color = site, shape=tree),size=5)+
   geom_segment(data=env.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
   # geom_segment(data=kingdom.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
