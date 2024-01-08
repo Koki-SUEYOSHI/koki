@@ -88,6 +88,7 @@ class.arrows <- data.frame(subset (class.arrows, pval < 0.05))
 rate = 1 # how many times shorter than acctual arrows
 options(ggrepel.max.overlaps = Inf)
 ggplot()+
+  scale_color_brewer(palette = "Set2")+
   geom_point(data=data, aes(x=MDS1,y=MDS2, color = site, shape=tree),size=5)+
   scale_color_brewer(palette = "Set2")+
   geom_segment(data=env.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
