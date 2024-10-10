@@ -1,0 +1,44 @@
+###############共起ネットワークについて#########################
+ASV.fungi.table <- read.table("~/Desktop/sueyoshi/Analize＆Datas/data_YAKUSHIMA/results(DADA2~relative_abundance)/for_ITS/rarefied_ASV_table.txt",header = T)
+ASV.bacteria.table <- read.table("~/Desktop/sueyoshi/Analize＆Datas/data_YAKUSHIMA/results(DADA2~relative_abundance)/for_16S/1207_primer除いたver/rarefied_ASV_table.txt", header = T)
+ASV.fungi.table <- ASV.fungi.table[,1:(ncol(ASV.fungi.table)-7)]
+ASV.bacteria.table <- ASV.bacteria.table[,1:(ncol(ASV.bacteria.table)-6)]
+
+#行と列を入れ替える
+ASV.fungi.table <- t(ASV.fungi.table)
+ASV.bacteria.table <- t(ASV.bacteria.table)
+
+# 列名にプレフィックスを追加
+colnames(ASV.fungi.table) <- paste("fungi", colnames(ASV.fungi.table), sep = "_")
+colnames(ASV.bacteria.table) <- paste("bacteria", colnames(ASV.bacteria.table), sep = "_")
+
+# 例: 68個のサンプル名を作成
+new_row_names <- paste0("CSM_", sprintf("%02d", 1:68))
+rownames(ASV.fungi.table) <- new_row_names
+rownames(ASV.bacteria.table) <- new_row_names
+
+combined_table <- cbind(ASV.fungi.table, ASV.bacteria.table)
+correlation_matrix <- cor(combined_table, method = "pearson")
+
+n_fungi <- ncol(ASV.fungi.table)
+n_bacteria <- ncol(ASV.bacteria.table)
+
+# Correlation between fungal and bacterial ASVs
+fungal_bacterial_corr <- correlation_matrix[1:n_fungi, (n_fungi+1):(n_fungi+n_bacteria)]
+
+# Filter correlations ≥ 0.4
+significant_corr <- fungal_bacterial_corr[fungal_bacterial_corr >= 0.4]
+
+adjacency_matrix <- ifelse(fungal_bacterial_corr >= 0.4, 1, 0)
+
+library(igraph)
+
+# Create bipartite graph
+fungi_nodes <- rownames(ASV.fungi.table)
+bacteria_nodes <- colnames(ASV.bacteria.table)
+
+# Create graph, specifying that the first set of nodes (fungi) is a different type (bipartite = TRUE)
+g <- graph_from_incidence_matrix(adjacency_matrix, mode = "all")
+
+# Plot the bipartite graph
+plot(g, vertex.label = c(fungi_nodes, bacteria_nodes))
