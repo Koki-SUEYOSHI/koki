@@ -1,3 +1,62 @@
+
+#############try_bipartite_20241007##############################################################################################################################
+setwd("~/Desktop/sueyoshi/Analize＆Datas/data_YAKUSHIMA/network_analysis/ITS")
+ASV.table <- read.table("~/Desktop/sueyoshi/Analize＆Datas/data_YAKUSHIMA/results(DADA2~relative_abundance)/for_ITS/rarefied_ASV_table.txt",header = T)
+ASV <- ASV.table [,1:(ncol(ASV.table)-7)]
+#行と列を入れ替える
+ASV <- t(ASV)
+
+#リード数データを在不在データに変換
+ASV_presence_absence <- apply(ASV, 2, function(x) ifelse(x > 0, 1, 0))
+
+#例: サンプル名と植栽区の対応を持つデータフレームを読み込む
+sample_info <- read.csv("~/Desktop/sueyoshi/Analize＆Datas/data_YAKUSHIMA/bipartite/ITS/sample_info.csv", header = T, row.names = 1)
+
+library(dplyr)
+library(tibble) 
+#データをデータフレーム形式に変換（必要な場合）
+asv_presence_absence_df <- as.data.frame(ASV_presence_absence)
+
+#行名を列に変換
+asv_data_with_names <- asv_presence_absence_df %>%
+  rownames_to_column(var = "sampling_site")
+
+#行の値を合算
+# ASV列だけを合算し、sampling_siteは保持
+asv_grouped <- asv_data_with_names %>%
+  group_by(sampling_site) %>%  # 行名を基にグループ化
+  summarise(across(starts_with("ASV"), sum, na.rm = TRUE), .groups = "drop") 
+#サンプル情報とASVデータを結合し、植栽区ごとにASVを合算
+#asv_grouped <- asv_presence_absence_df %>%
+  #mutate(Tree = sample_info$trees, Site = sample_info$site) %>%
+  #group_by(!!sym(names(asv_presence_absence_df)[1])) %>%
+  #summarise(across(everything(), sum, na.rm = TRUE))
+
+# asv_data_with_names を CSV ファイルとして保存
+write.csv(asv_data_with_names, file = "asv_data_with_names.csv", row.names = FALSE)
+asv_grouped <- read.csv("~/Desktop/sueyoshi/Analize＆Datas/data_YAKUSHIMA/bipartite/ITS/asv_grouped.csv",header = T)
+
+#結果の確認
+head(asv_grouped)
+
+#dist関数を使って距離行列を計算し、隣接行列に変換
+asv_grouped[is.na(asv_grouped)] <- 0
+distance_matrix <- as.matrix(dist(asv_grouped[, -1]))  # 最初の列は植栽区なので除外
+
+#隣接行列は、距離行列を相似度に変換することで得られます
+#ここでは、距離が小さいほど大きな相似度とします
+adjacency_matrix <- 1 / (1 + distance_matrix)
+
+# 結果の確認
+head(adjacency_matrix)
+
+plotweb2(adjacency_matrix)
+
+head(motten1982)
+
+
+
+
 ###############共起ネットワークについて##################################################################################################################################
 library(dplyr)
 library(igraph)
@@ -21,7 +80,7 @@ taxonomy_fungi <- data.frame(lapply(taxonomy_fungi, function(x){gsub(pattern="s_
 rownames(taxonomy_fungi) <- rownames(ASV.fungi.table)  # 行名を元の行名で設定
 
 #例: サンプル名と植栽区の対応を持つデータフレームを読み込む(tree & location)
-sample_info <- read.csv("~/Desktop/sueyoshi/Analize＆Datas/data_YAKUSHIMA/bipartite/ITS/sample_info.csv", header = T, row.names = 1)
+sample_info <- read.csv("~/Desktop/sueyoshi/Analize＆Datas/data_YAKUSHIMA/network_analysis/ITS/sample_info.csv", header = T, row.names = 1)
 
 #ASV_table
 ASV.fungi.table <- ASV.fungi.table[,1:(ncol(ASV.fungi.table)-7)]
@@ -113,25 +172,18 @@ correlation_canopy_matrix <- cor(combined_canopy_table_filtered, method = "spear
 
 
 ### 真菌＊細菌#############################################################################################################################
+
+#####ground#######
 #ground
 n_fungi_ground <- ncol(asv_fungi_ground)
 n_bacteria_ground <- ncol(asv_bacteria_ground)
 # Correlation between fungal and bacterial ASVs
 fungal_bacterial_ground_corr <- correlation_matrix[1:n_fungi_ground, (n_fungi_ground+1):(n_fungi_ground+n_bacteria_ground)]
 
-#canopy
-n_fungi_canopy <- ncol(asv_fungi_canopy)
-n_bacteria_canopy <- ncol(asv_bacteria_canopy)
-# Correlation between fungal and bacterial ASVs
-fungal_bacterial_canopy_corr <- correlation_matrix[1:n_fungi_canopy, (n_fungi_canopy+1):(n_fungi_canopy+n_bacteria_canopy)]
-
-# 隣接行列の作成（相関係数が0.4以上）
-adjacency_ground <- ifelse(fungal_bacterial_ground_corr >= 0.6, 1, 0)
-adjacency_canopy <- ifelse(fungal_bacterial_canopy_corr >= 0.6, 1, 0)
-
+# 隣接行列の作成（相関係数が0.4以上
+adjacency_ground <- ifelse(fungal_bacterial_ground_corr >= 0.7, 1, 0)
 # グラフの作成
 g_ground <- graph_from_incidence_matrix(adjacency_ground)
-g_canopy <- graph_from_incidence_matrix(adjacency_canopy)
 
 # 1. 行名（fungal ASVs）と列名（bacterial ASVs）を取得
 fungi_asv_ground_names <- rownames(fungal_bacterial_ground_corr)    # Fungal ASVs の行名
@@ -139,9 +191,79 @@ bacteria_asv_ground_names <- colnames(fungal_bacterial_ground_corr) # Bacterial 
 # 2. ノード名の設定 (行名と列名を結合して設定)
 V(g_ground)$name <- c(fungi_asv_ground_names, bacteria_asv_ground_names)
 
-plot(g_ground)
+# 2. ノード名の設定 (行名と列名を結合して設定)
+#V(g_canopy)$name <- c(fungi_asv_canopy_names, bacteria_asv_canopy_names)
+
+# 2. fungiの'class' 情報を抽出,Bacterial ASVsの 'class' 情報を取得
+taxonomy_fungi_ground_class <- taxonomy_fungi_filtered[rownames(fungal_bacterial_ground_corr), "Class"]
+taxonomy_bacteria_ground_class <- taxonomy_bacteria_filtered[bacteria_asv_ground_names, "Class"]
+
+# 3. ユニークな 'class' を取得
+unique_fungi_classes <- unique(taxonomy_fungi_ground_class)
+unique_bacteria_classes <- unique(taxonomy_bacteria_ground_class)
+
+# 4. 真菌には暖色系パレットを拡張
+palette_fungi <- colorRampPalette(brewer.pal(9, "Set1"))(length(unique_fungi_classes))  # "Set1" ベースの拡張パレット
+palette_bacteria <- colorRampPalette(brewer.pal(9, "Set3"))(length(unique_bacteria_classes))  # "Set3" ベースの拡張パレット
+
+# 5. 'class' ごとに色を割り当て
+class_colors_fungi <- setNames(palette_fungi, unique_fungi_classes)
+class_colors_bacteria <- setNames(palette_bacteria, unique_bacteria_classes)
+
+# 6. ノードに色を割り当て
+node_colors_fungi <- class_colors_fungi[taxonomy_fungi_ground_class]
+node_colors_bacteria <- class_colors_bacteria[taxonomy_bacteria_ground_class]
+
+# 6.5. Fungal ASVsとBacterial ASVsの色を結合
+node_colors <- c(node_colors_fungi, node_colors_bacteria)
+
+# 7. ノードの形を設定（真菌は丸、バクテリアは三角）
+shapes_fungi <- rep("circle", length(fungi_asv_ground_names))       # 真菌のノードの形
+shapes_bacteria <- rep("square", length(bacteria_asv_ground_names))  # バクテリアのノードの形
+node_shapes <- c(shapes_fungi, shapes_bacteria)
+
+# 8. エッジのないノードを削除
+g_ground <- delete.vertices(g_ground, degree(g_ground) == 0)
+
+# 9. 削除後のノード名を取得
+remaining_node_names <- V(g_ground)$name
+# 10. 残ったノードに対応する色と形を再設定
+remaining_node_colors <- sapply(remaining_node_names, function(node_name) {
+  if (node_name %in% fungi_asv_ground_names) {
+    return(class_colors_fungi[taxonomy_fungi_ground_class[match(node_name, fungi_asv_ground_names)]])
+  } else if (node_name %in% bacteria_asv_ground_names) {
+    return(class_colors_bacteria[taxonomy_bacteria_ground_class[match(node_name, bacteria_asv_ground_names)]])
+  } else {
+    return(NA)  # 該当しない場合はNA
+  }
+})
+
+# 11. 残ったノードの形を設定
+remaining_node_shapes_fungi <- rep("circle", sum(remaining_node_names %in% fungi_asv_ground_names))
+remaining_node_shapes_bacteria <- rep("square", sum(remaining_node_names %in% bacteria_asv_ground_names))
+remaining_node_shapes <- c(remaining_node_shapes_fungi, remaining_node_shapes_bacteria)
+
+# 12. 削除後のノードに色と形を反映させたネットワーク図を描画
+plot(g_ground, 
+     vertex.color = adjustcolor(remaining_node_colors, alpha.f = 0.7),  # ノードの色と透明度
+     vertex.size = 5,  # ノードのサイズ
+     vertex.shape = remaining_node_shapes,  # ノードの形を設定
+     edge.width = E(g_canopy)$weight * 5,  # エッジの太さ
+     vertex.label = NA)  # ノードラベルを非表示
 
 
+###canopy####
+#canopy
+n_fungi_canopy <- ncol(asv_fungi_canopy)
+n_bacteria_canopy <- ncol(asv_bacteria_canopy)
+# Correlation between fungal and bacterial ASVs
+fungal_bacterial_canopy_corr <- correlation_matrix[1:n_fungi_canopy, (n_fungi_canopy+1):(n_fungi_canopy+n_bacteria_canopy)]
+
+# 隣接行列の作成（相関係数が0.4以上）
+adjacency_canopy <- ifelse(fungal_bacterial_canopy_corr >= 0.7, 1, 0)
+
+# グラフの作成
+g_canopy <- graph_from_incidence_matrix(adjacency_canopy)
 # 1. 行名（fungal ASVs）と列名（bacterial ASVs）を取得
 fungi_asv_canopy_names <- rownames(fungal_bacterial_canopy_corr)    # Fungal ASVs の行名
 bacteria_asv_canopy_names <- colnames(fungal_bacterial_canopy_corr) # Bacterial ASVs の列名
@@ -240,8 +362,117 @@ plot(g_canopy, vertex.shape = V(g_canopy)$shape, vertex.label = NA)
 
 
 ### fungi 同士の相関行列を抽出#############################################################################################################################################
+####ground
+fungi_ground_only_corr <- combined_ground_table[1:n_fungi, 1:n_fungi]
+fungi_ground_only_corr <- fungi_ground_only_corr[1:24, ]
+
+# 各列の標準偏差を計算
+sd_values <- apply(fungi_ground_only_corr, 2, sd)
+# 標準偏差がゼロの列を確認
+zero_sd_cols <- which(sd_values == 0)
+print(zero_sd_cols)  # 標準偏差がゼロの列番号を確認
+# 標準偏差がゼロでない列を残す
+fungi_ground_filtered <- fungi_ground_only_corr[, sd_values > 0]
+# Spearman相関行列を計算
+correlation_fungi_ground_matrix <- cor(fungi_ground_filtered, method = "spearman")
+# 対角成分（自己相関）は 0 にする
+diag(correlation_fungi_ground_matrix) <- 0
+
+# 閾値を設定して相関係数をフィルタリング（0.4以上の相関のみ残す）
+adjacency_fungi_ground_matrix <- ifelse(correlation_fungi_ground_matrix >= 0.6, correlation_fungi_ground_matrix, 0)
+
+# ASVに基づく重み付きグラフを作成
+g_ground <- graph_from_adjacency_matrix(adjacency_fungi_ground_matrix, mode = "undirected", weighted = TRUE, diag = FALSE)
+# エッジのないノードを削除
+g_ground <- delete.vertices(g_ground, degree(g_ground) == 0)
+V(g_ground)$name
+# 削除後に残ったノード（ASV）名を確認
+remaining_asvs <- V(g_ground)$name
+print(remaining_asvs)
+
+# 'remaining_asvs' に基づいて taxonomy_fungi_filtered から対応するタクソノミー情報を抽出
+remaining_taxonomy_fungi <- taxonomy_fungi_filtered[rownames(taxonomy_fungi_filtered) %in% remaining_asvs, ]
+# 'Class' 情報を抽出
+taxonomy_fungi_ground_class <- remaining_taxonomy_fungi[, "Class"]
+
+# ユニークなクラスごとに色を設定（暖色系のパレット "Set1" を使用）
+unique_classes <- unique(taxonomy_fungi_ground_class)
+palette <- brewer.pal(min(length(unique_classes), 9), "Set1")  # "Set1" の色を取得（最大9色まで）
+if (length(unique_classes) > 9) {
+  palette <- colorRampPalette(brewer.pal(9, "Set1"))(length(unique_classes))  # 9色以上の場合に拡張
+}
+class_colors <- setNames(palette, unique_classes)
+
+# クラスに基づいてノードに色を割り当てる
+node_colors <- class_colors[taxonomy_fungi_ground_class]
+V(g_ground)$color <- node_colors
+
+# ノードの透明度を高め、サイズを小さくしてネットワーク図を描画
+plot(g_ground, 
+     vertex.color = adjustcolor(V(g_ground)$color, alpha.f = 0.7),  # ノードの色と透明度
+     vertex.size = 5,  # ノードのサイズを小さく調整
+     edge.width = E(g_ground)$weight * 5,  # エッジの太さ
+     vertex.label = NA)  # ノードラベルを非表示
+
+
+
+####canopy
 fungi_canopy_only_corr <- combined_canopy_table[1:n_fungi, 1:n_fungi]
 fungi_canopy_only_corr <- fungi_canopy_only_corr[1:44, ]
+
+# 各列の標準偏差を計算
+sd_values <- apply(fungi_canopy_only_corr, 2, sd)
+# 標準偏差がゼロの列を確認
+zero_sd_cols <- which(sd_values == 0)
+print(zero_sd_cols)  # 標準偏差がゼロの列番号を確認
+# 標準偏差がゼロでない列を残す
+fungi_canopy_filtered <- fungi_canopy_only_corr[, sd_values > 0]
+# Spearman相関行列を計算
+correlation_fungi_canopy_matrix <- cor(fungi_canopy_filtered, method = "spearman")
+# 対角成分（自己相関）は 0 にする
+diag(correlation_fungi_canopy_matrix) <- 0
+
+# 閾値を設定して相関係数をフィルタリング（0.4以上の相関のみ残す）
+adjacency_fungi_canopy_matrix <- ifelse(correlation_fungi_canopy_matrix >= 0.6, correlation_fungi_canopy_matrix, 0)
+
+# ASVに基づく重み付きグラフを作成
+g_canopy <- graph_from_adjacency_matrix(adjacency_fungi_canopy_matrix, mode = "undirected", weighted = TRUE, diag = FALSE)
+# エッジのないノードを削除
+g_canopy <- delete.vertices(g_canopy, degree(g_canopy) == 0)
+V(g_canopy)$name
+# 削除後に残ったノード（ASV）名を確認
+remaining_asvs <- V(g_canopy)$name
+print(remaining_asvs)
+
+# 'remaining_asvs' に基づいて taxonomy_fungi_filtered から対応するタクソノミー情報を抽出
+remaining_taxonomy_fungi <- taxonomy_fungi_filtered[rownames(taxonomy_fungi_filtered) %in% remaining_asvs, ]
+# 'Class' 情報を抽出
+taxonomy_fungi_canopy_class <- remaining_taxonomy_fungi[, "Class"]
+
+# ユニークなクラスごとに色を設定（暖色系のパレット "Set1" を使用）
+unique_classes <- unique(taxonomy_fungi_canopy_class)
+palette <- brewer.pal(min(length(unique_classes), 9), "Set1")  # "Set1" の色を取得（最大9色まで）
+if (length(unique_classes) > 9) {
+  palette <- colorRampPalette(brewer.pal(9, "Set1"))(length(unique_classes))  # 9色以上の場合に拡張
+}
+class_colors <- setNames(palette, unique_classes)
+
+# クラスに基づいてノードに色を割り当てる
+node_colors <- class_colors[taxonomy_fungi_canopy_class]
+V(g_canopy)$color <- node_colors
+
+# ノードの透明度を高め、サイズを小さくしてネットワーク図を描画
+plot(g_canopy, 
+     vertex.color = adjustcolor(V(g_canopy)$color, alpha.f = 0.7),  # ノードの色と透明度
+     vertex.size = 5,  # ノードのサイズを小さく調整
+     edge.width = E(g_canopy)$weight * 5,  # エッジの太さ
+     vertex.label = NA)  # ノードラベルを非表示
+
+
+
+### bacteria 同士の相関行列を抽出.  余裕があったらやる1016#############################################################################################################################################
+bacteria_canopy_only_corr <- combined_canopy_table[n_fungi_ground+n_bacteria_ground,n_fungi_ground+n_bacteria_ground]
+bacteria_canopy_only_corr <- fungi_canopy_only_corr[1:44, ]
 
 # 各列の標準偏差を計算
 sd_values <- apply(fungi_canopy_only_corr, 2, sd)
