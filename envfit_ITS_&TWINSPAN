@@ -2,11 +2,11 @@ library(ggplot2)
 library(vegan)
 library(ggrepel)
 
-setwd("~/Desktop/sueyoshi/for_r/data_YAKUSHIMA/for_envfit/ITS")
-METADATA <- read.csv("~/Desktop/sueyoshi/for_r/data_YAKUSHIMA/for_envfit/ITS/extracted_with_N_ITS_fixed.csv",row.names=1,header = T)
-ASV.table <- read.table("~/Desktop/sueyoshi/for_r/data_YAKUSHIMA/for_envfit/ITS/extracted_ASV_table_with_N_ITS.txt",header = T)
+setwd("~/Desktop/sueyoshi/Analize＆Datas/data_YAKUSHIMA/for_envfit/ITS")
+METADATA <- read.csv("~/Desktop/sueyoshi/Analize＆Datas/data_YAKUSHIMA/for_envfit/ITS/extracted_with_N_ITS_fixed.csv",row.names=1,header = T)
+METADATA <- METADATA[,-c(6,8,10,12,14)]
+ASV.table <- read.table("~/Desktop/sueyoshi/Analize＆Datas/data_YAKUSHIMA/for_envfit/ITS/extracted_ASV_table_with_N_ITS.txt",header = T)
 #METADATA <- METADATA[,1:(ncol(METADATA)-26)] #加えた
-
 
 # % table
 ASV <- ASV.table [,1:(ncol(ASV.table)-7)]
@@ -16,6 +16,11 @@ percent <- ASV / mean(colSums(ASV)) *100
 taxonomy <- data.frame(lapply(taxonomy, function(x){gsub(pattern="k__", replacement = "", x)}),stringsAsFactors = FALSE)
 taxonomy <- data.frame(lapply(taxonomy, function(x){gsub(pattern="p__", replacement = "", x)}),stringsAsFactors = FALSE)
 taxonomy <- data.frame(lapply(taxonomy, function(x){gsub(pattern="c__", replacement = "", x)}),stringsAsFactors = FALSE)
+taxonomy <- data.frame(lapply(taxonomy, function(x){gsub(pattern="o__", replacement = "", x)}),stringsAsFactors = FALSE)
+taxonomy <- data.frame(lapply(taxonomy, function(x){gsub(pattern="f__", replacement = "", x)}),stringsAsFactors = FALSE)
+taxonomy <- data.frame(lapply(taxonomy, function(x){gsub(pattern="g__", replacement = "", x)}),stringsAsFactors = FALSE)
+taxonomy <- data.frame(lapply(taxonomy, function(x){gsub(pattern="s__", replacement = "", x)}),stringsAsFactors = FALSE)
+rownames(taxonomy) <- rownames(ASV)  # 行名を元の行名で設定
 
 # Make Kingdom table
 kingdom <- aggregate(percent, by=list(taxonomy$Kingdom),FUN = sum,na.rm=F) 
@@ -64,7 +69,7 @@ phylum.fit<-envfit(nmds, major.phylum.t, perm=10000)
 class.fit<-envfit(nmds, major.class.t, perm=10000)
 
 #Make dataset
-data <- cbind(nmds$points,METADATA[,1:(ncol(METADATA)-11)])
+data <- cbind(nmds$points,METADATA[,1:(ncol(METADATA)-5)])
 env.values <- (env.fit$vectors[1]$arrows)
 pval <- (env.fit$vectors[4]$pvals)
 env.arrows <- cbind (env.values, pval)
@@ -88,116 +93,128 @@ class.arrows <- data.frame(subset (class.arrows, pval < 0.05))
 rate = 1 # how many times shorter than acctual arrows
 options(ggrepel.max.overlaps = Inf)
 ggplot()+
-  scale_color_brewer(palette = "Set2")+
   geom_point(data=data, aes(x=MDS1,y=MDS2, color = site, shape=tree),size=5)+
   scale_color_brewer(palette = "Set2")+
-  geom_segment(data=env.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
+  geom_segment(data=env.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate* (1 - pval)), yend = (NMDS2*rate* (1 - pval))), arrow = arrow(length = unit(0.3,"cm")),color="black")+
   # geom_segment(data=kingdom.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
-  geom_segment(data=phylum.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="#404040")+
-  geom_segment(data=class.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="#808080")+
-  geom_text_repel(data=env.arrows, aes(x=(NMDS1*rate), y=(NMDS2*rate), label=rownames(env.arrows)),  size=4, color="black") +
+  geom_segment(data=phylum.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate* (1 - pval)), yend = (NMDS2*rate* (1 - pval))), arrow = arrow(length = unit(0.3,"cm")),color="#404040")+
+  geom_segment(data=class.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate* (1 - pval)), yend = (NMDS2*rate* (1 - pval))), arrow = arrow(length = unit(0.3,"cm")),color="#808080")+
+  geom_text_repel(data=env.arrows, aes(x=(NMDS1*rate* (1 - pval)), y=(NMDS2*rate* (1 - pval)), label=rownames(env.arrows)),  size=4, color="black") +
   # geom_text_repel(data=kingdom.arrows, aes(x=(NMDS1*rate), y=(NMDS2*rate), label=rownames(kingdom.arrows)),  size=4, color="black") +
-  geom_text_repel(data=phylum.arrows, aes(x=(NMDS1*rate), y=(NMDS2*rate), label=rownames(phylum.arrows)),  size=4, color="#404040") +
-  geom_text_repel(data=class.arrows, aes(x=(NMDS1*rate), y=(NMDS2*rate), label=rownames(class.arrows)),  size=4, color="#808080") +
+  geom_text_repel(data=phylum.arrows, aes(x=(NMDS1*rate* (1 - pval)), y=(NMDS2*rate* (1 - pval)), label=rownames(phylum.arrows)),  size=4, color="#404040") +
+  geom_text_repel(data=class.arrows, aes(x=(NMDS1*rate* (1 - pval)), y=(NMDS2*rate* (1 - pval)), label=rownames(class.arrows)),  size=4, color="#808080") +
   theme(text=element_text(size=14,color="black"),axis.text=element_text(size=12,color="black"))+
   coord_fixed()
 
 # Save
-ggsave(file = "ITS_everything.png")
+ggsave(file = "0226_ITS_everything_.png")
 
 
 #without_words
 rate = 1 # how many times shorter than acctual arrows
 options(ggrepel.max.overlaps = Inf)
 ggplot()+
-  scale_color_brewer(palette = "Set2")+
   geom_point(data=data, aes(x=MDS1,y=MDS2, color = site, shape=tree),size=5)+
-  geom_segment(data=env.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
+  scale_color_brewer(palette = "Set2")+
+  geom_segment(data=env.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate* (1 - pval)), yend = (NMDS2*rate* (1 - pval))), arrow = arrow(length = unit(0.3,"cm")),color="black")+
   # geom_segment(data=kingdom.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
-  geom_segment(data=phylum.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="#404040")+
-  geom_segment(data=class.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="#808080")+
+  geom_segment(data=phylum.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate* (1 - pval)), yend = (NMDS2*rate* (1 - pval))), arrow = arrow(length = unit(0.3,"cm")),color="#404040")+
+  geom_segment(data=class.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate* (1 - pval)), yend = (NMDS2*rate* (1 - pval))), arrow = arrow(length = unit(0.3,"cm")),color="#808080")+
   # geom_text_repel(data=kingdom.arrows, aes(x=(NMDS1*rate), y=(NMDS2*rate), label=rownames(kingdom.arrows)),  size=4, color="black") +
   coord_fixed()
 
 # Save
-ggsave(file = "ITS_everything_without_words.png")
+ggsave(file = "0226_ITS_everything_without_words.png")
 
 # ggplot_class_only
 rate = 1 # how many times shorter than acctual arrows
 options(ggrepel.max.overlaps = Inf)
 ggplot()+
-  scale_color_brewer(palette = "Set2")+
   geom_point(data=data, aes(x=MDS1,y=MDS2, color = site, shape=tree),size=5)+
+  scale_color_brewer(palette = "Set2")+
   # geom_segment(data=kingdom.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
-  geom_segment(data=phylum.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="#404040")+
-  geom_segment(data=class.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="#808080")+
+  geom_segment(data=phylum.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate* (1 - pval)), yend = (NMDS2*rate* (1 - pval))), arrow = arrow(length = unit(0.3,"cm")),color="#404040")+
+  geom_segment(data=class.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate* (1 - pval)), yend = (NMDS2*rate* (1 - pval))), arrow = arrow(length = unit(0.3,"cm")),color="#808080")+
   # geom_text_repel(data=kingdom.arrows, aes(x=(NMDS1*rate), y=(NMDS2*rate), label=rownames(kingdom.arrows)),  size=4, color="black") +
-  geom_text_repel(data=phylum.arrows, aes(x=(NMDS1*rate), y=(NMDS2*rate), label=rownames(phylum.arrows)), size=4, color="#404040") +
-  geom_text_repel(data=class.arrows, aes(x=(NMDS1*rate), y=(NMDS2*rate), label=rownames(class.arrows)),  size=4, color="#808080") +
+  geom_text_repel(data=phylum.arrows, aes(x=(NMDS1*rate* (1 - pval)), y=(NMDS2*rate* (1 - pval)), label=rownames(phylum.arrows)), size=4, color="#404040") +
+  geom_text_repel(data=class.arrows, aes(x=(NMDS1*rate* (1 - pval)), y=(NMDS2*rate* (1 - pval)), label=rownames(class.arrows)),  size=4, color="#808080") +
   theme(text=element_text(size=14,color="black"),axis.text=element_text(size=12,color="black"))+
   coord_fixed()
 
 # Save
-ggsave(file = "ITS_only_class.png")
+ggsave(file = "0226_ITS_only_class.png")
 
 # without_words
 rate = 1 # how many times shorter than acctual arrows
 options(ggrepel.max.overlaps = Inf)
 ggplot()+
-  scale_color_brewer(palette = "Set2")+
   geom_point(data=data, aes(x=MDS1,y=MDS2, color = site, shape=tree),size=5)+
+  scale_color_brewer(palette = "Set2")+
   # geom_segment(data=kingdom.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
-  geom_segment(data=phylum.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="#404040")+
-  geom_segment(data=class.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="#808080")+
+  geom_segment(data=phylum.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate* (1 - pval)), yend = (NMDS2*rate* (1 - pval))), arrow = arrow(length = unit(0.3,"cm")),color="#404040")+
+  geom_segment(data=class.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate* (1 - pval)), yend = (NMDS2*rate* (1 - pval))), arrow = arrow(length = unit(0.3,"cm")),color="#808080")+
   # geom_text_repel(data=kingdom.arrows, aes(x=(NMDS1*rate), y=(NMDS2*rate), label=rownames(kingdom.arrows)),  size=4, color="black") +
   theme(text=element_text(size=14,color="black"),axis.text=element_text(size=12,color="black"))+
   coord_fixed()
 
 # Save
-ggsave(file = "ITS_only_class_without_words.png")
+ggsave(file = "0226_ITS_only_class_without_words.png")
 
 
 # ggplot_scores_only
 rate = 1 # how many times shorter than acctual arrows
 ggplot()+
-  scale_color_brewer(palette = "Set2")+
   geom_point(data=data, aes(x=MDS1,y=MDS2, color = site, shape=tree),size=5)+
-  geom_segment(data=env.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
+  scale_color_brewer(palette = "Set2")+
+  geom_segment(data=env.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate* (1 - pval)), yend = (NMDS2*rate* (1 - pval))), arrow = arrow(length = unit(0.3,"cm")),color="black")+
   # geom_segment(data=kingdom.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
-  geom_text_repel(data=env.arrows, aes(x=(NMDS1*rate), y=(NMDS2*rate), label=rownames(env.arrows)),  size=4, color="black") +
+  geom_text_repel(data=env.arrows, aes(x=(NMDS1*rate* (1 - pval)), y=(NMDS2*rate* (1 - pval)), label=rownames(env.arrows)),  size=4, color="black") +
   # geom_text_repel(data=kingdom.arrows, aes(x=(NMDS1*rate), y=(NMDS2*rate), label=rownames(kingdom.arrows)),  size=4, color="black") +
   theme(text=element_text(size=14,color="black"),axis.text=element_text(size=12,color="black"))+
   coord_fixed()
 
 # Save
-ggsave(file = "ITS_scores_only.png")
+ggsave(file = "ITS_scores_only_0226.png")
 
 # without_words
 rate = 1 # how many times shorter than acctual arrows
 ggplot()+
-  scale_color_brewer(palette = "Set2")+
   geom_point(data=data, aes(x=MDS1,y=MDS2, color = site, shape=tree),size=5)+
-  geom_segment(data=env.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
+  scale_color_brewer(palette = "Set2")+
+  geom_segment(data=env.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate* (1 - pval)), yend = (NMDS2*rate* (1 - pval))), arrow = arrow(length = unit(0.3,"cm")),color="black")+
   # geom_segment(data=kingdom.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
   # geom_text_repel(data=kingdom.arrows, aes(x=(NMDS1*rate), y=(NMDS2*rate), label=rownames(kingdom.arrows)),  size=4, color="black") +
   theme(text=element_text(size=14,color="black"),axis.text=element_text(size=12,color="black"))+
   coord_fixed()
 
 # Save
-ggsave(file = "ITS_scores_only_without_words.png")
+ggsave(file = "ITS_scores_only_without_words_0226.png")
 
 #view a stress score
 nmds$stress
 
-write.csv(class.arrows,"class.arrows")
-write.csv(class.values,"class.values")
-write.csv(phylum.arrows,"phylum.arrows")
-write.csv(phylum.values,"phylum.values")
-write.csv(kingdom.arrows,"kingdom.arrows")
-write.csv(kingdom.values,"kingdom.values")
-write.csv(env.arrows,"env.arrows")
-write.csv(env.values,"env.values")
-write.csv(data,"data")
+write.csv(class.arrows,"class.arrows.csv")
+write.csv(class.values,"class.values.csv")
+write.csv(phylum.arrows,"phylum.arrows.csv")
+write.csv(phylum.values,"phylum.values.csv")
+write.csv(kingdom.arrows,"kingdom.arrows.csv")
+write.csv(kingdom.values,"kingdom.values.csv")
+write.csv(env.arrows,"env.arrows.csv")
+write.csv(env.values,"env.values.csv")
+write.csv(data,"data.csv")
+
+ASV.t <- t(ASV)
+adonis <- adonis(ASV.t ~ site, data=METADATA, permutations=10000)
+
+# Save
+Fval <- adonis[[1]][,4]
+R2 <- adonis[[1]][,5]
+Pval <-adonis[[1]][,6]
+bind <- cbind(Fval, R2, Pval)
+rownames (bind) <- rownames(adonis[[1]])                 
+
+write.csv (bind, "PerMANOVA.csv")
+
 
 #delete column
 df.koki <- read.table("/Users/forestry/Desktop/sueyoshi/for_r/data_YAKUSHIMA/results/for_ITS/rarefied_ASV_table.txt",header = T)
@@ -208,6 +225,7 @@ df.koki2 <- read.csv("~/Desktop/sueyoshi/for_r/data_YAKUSHIMA/for_envfit/ITS/ext
 df.koki2 <- df.koki2[-51:-56,]
 write.csv(df.koki2,file="extracted_with_N_ITS_fixed.csv")
 
+#####################################################################################################################
 #########TWINSPAN用#####################################################################################################################
 
 library(ggplot2)
@@ -362,33 +380,52 @@ ggplot()+
   geom_text_repel(data=phylum.arrows, aes(x=(NMDS1*rate* (1 - pval)), y=(NMDS2*rate* (1 - pval)), label=rownames(phylum.arrows)),  size=4, color="#404040") +
   geom_text_repel(data=class.arrows, aes(x=(NMDS1*rate* (1 - pval)), y=(NMDS2*rate* (1 - pval)), label=rownames(class.arrows)),  size=4, color="#808080") +
   theme(text=element_text(size=14,color="black"),axis.text=element_text(size=12,color="black"))+
+  theme(
+    text = element_text(size = 14, color = "black"),
+    axis.text = element_text(size = 12, color = "black"),
+    axis.title = element_text(size = 14, color = "black")  # 軸ラベルを追加
+  ) +
+  labs(
+    x = "NMDS1",  # x軸ラベル
+    y = "NMDS2"   # y軸ラベル
+  ) +
   coord_fixed()
 
 # Save
-ggsave(file = "0226_ITS_everything_.png")
+ggsave(file = "ITS_TWINSPAN_everything_241211.png")
 
 
 #without_words
 rate = 1 # how many times shorter than acctual arrows
 options(ggrepel.max.overlaps = Inf)
 ggplot()+
-  geom_point(data=data, aes(x=MDS1,y=MDS2, color = site, shape=tree),size=5)+
+  geom_point(data=data, aes(x=MDS1,y=MDS2, color = type),size=5)+
   scale_color_brewer(palette = "Set2")+
   geom_segment(data=env.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate* (1 - pval)), yend = (NMDS2*rate* (1 - pval))), arrow = arrow(length = unit(0.3,"cm")),color="black")+
   # geom_segment(data=kingdom.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
   geom_segment(data=phylum.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate* (1 - pval)), yend = (NMDS2*rate* (1 - pval))), arrow = arrow(length = unit(0.3,"cm")),color="#404040")+
   geom_segment(data=class.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate* (1 - pval)), yend = (NMDS2*rate* (1 - pval))), arrow = arrow(length = unit(0.3,"cm")),color="#808080")+
   # geom_text_repel(data=kingdom.arrows, aes(x=(NMDS1*rate), y=(NMDS2*rate), label=rownames(kingdom.arrows)),  size=4, color="black") +
+  theme(text=element_text(size=14,color="black"),axis.text=element_text(size=12,color="black"))+
+  theme(
+    text = element_text(size = 14, color = "black"),
+    axis.text = element_text(size = 12, color = "black"),
+    axis.title = element_text(size = 14, color = "black")  # 軸ラベルを追加
+  ) +
+  labs(
+    x = "NMDS1",  # x軸ラベル
+    y = "NMDS2"   # y軸ラベル
+  ) +
   coord_fixed()
 
 # Save
-ggsave(file = "0226_ITS_everything_without_words.png")
+ggsave(file = "ITS_TWINSPAN_everything_without_words_241211.png")
 
 # ggplot_class_only
 rate = 1 # how many times shorter than acctual arrows
 options(ggrepel.max.overlaps = Inf)
 ggplot()+
-  geom_point(data=data, aes(x=MDS1,y=MDS2, color = site, shape=tree),size=5)+
+  geom_point(data=data, aes(x=MDS1,y=MDS2, color = type),size=5)+
   scale_color_brewer(palette = "Set2")+
   # geom_segment(data=kingdom.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
   geom_segment(data=phylum.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate* (1 - pval)), yend = (NMDS2*rate* (1 - pval))), arrow = arrow(length = unit(0.3,"cm")),color="#404040")+
@@ -397,56 +434,96 @@ ggplot()+
   geom_text_repel(data=phylum.arrows, aes(x=(NMDS1*rate* (1 - pval)), y=(NMDS2*rate* (1 - pval)), label=rownames(phylum.arrows)), size=4, color="#404040") +
   geom_text_repel(data=class.arrows, aes(x=(NMDS1*rate* (1 - pval)), y=(NMDS2*rate* (1 - pval)), label=rownames(class.arrows)),  size=4, color="#808080") +
   theme(text=element_text(size=14,color="black"),axis.text=element_text(size=12,color="black"))+
+  theme(text=element_text(size=14,color="black"),axis.text=element_text(size=12,color="black"))+
+  theme(
+    text = element_text(size = 14, color = "black"),
+    axis.text = element_text(size = 12, color = "black"),
+    axis.title = element_text(size = 14, color = "black")  # 軸ラベルを追加
+  ) +
+  labs(
+    x = "NMDS1",  # x軸ラベル
+    y = "NMDS2"   # y軸ラベル
+  ) +
   coord_fixed()
 
 # Save
-ggsave(file = "0226_ITS_only_class.png")
+ggsave(file = "ITS_TWINSPAN_only_microbes_241211.png")
 
 # without_words
 rate = 1 # how many times shorter than acctual arrows
 options(ggrepel.max.overlaps = Inf)
 ggplot()+
-  geom_point(data=data, aes(x=MDS1,y=MDS2, color = site, shape=tree),size=5)+
+  geom_point(data=data, aes(x=MDS1,y=MDS2, color = type),size=5)+
   scale_color_brewer(palette = "Set2")+
   # geom_segment(data=kingdom.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
   geom_segment(data=phylum.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate* (1 - pval)), yend = (NMDS2*rate* (1 - pval))), arrow = arrow(length = unit(0.3,"cm")),color="#404040")+
   geom_segment(data=class.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate* (1 - pval)), yend = (NMDS2*rate* (1 - pval))), arrow = arrow(length = unit(0.3,"cm")),color="#808080")+
   # geom_text_repel(data=kingdom.arrows, aes(x=(NMDS1*rate), y=(NMDS2*rate), label=rownames(kingdom.arrows)),  size=4, color="black") +
   theme(text=element_text(size=14,color="black"),axis.text=element_text(size=12,color="black"))+
+  theme(text=element_text(size=14,color="black"),axis.text=element_text(size=12,color="black"))+
+  theme(
+    text = element_text(size = 14, color = "black"),
+    axis.text = element_text(size = 12, color = "black"),
+    axis.title = element_text(size = 14, color = "black")  # 軸ラベルを追加
+  ) +
+  labs(
+    x = "NMDS1",  # x軸ラベル
+    y = "NMDS2"   # y軸ラベル
+  ) +
   coord_fixed()
 
 # Save
-ggsave(file = "0226_ITS_only_class_without_words.png")
+ggsave(file = "ITS_TWINSPAN_only_microbes_without_words_241211.png")
 
 
 # ggplot_scores_only
 rate = 1 # how many times shorter than acctual arrows
 ggplot()+
-  geom_point(data=data, aes(x=MDS1,y=MDS2, color = site, shape=tree),size=5)+
+  geom_point(data=data, aes(x=MDS1,y=MDS2, color = type),size=5)+
   scale_color_brewer(palette = "Set2")+
   geom_segment(data=env.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate* (1 - pval)), yend = (NMDS2*rate* (1 - pval))), arrow = arrow(length = unit(0.3,"cm")),color="black")+
   # geom_segment(data=kingdom.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
   geom_text_repel(data=env.arrows, aes(x=(NMDS1*rate* (1 - pval)), y=(NMDS2*rate* (1 - pval)), label=rownames(env.arrows)),  size=4, color="black") +
   # geom_text_repel(data=kingdom.arrows, aes(x=(NMDS1*rate), y=(NMDS2*rate), label=rownames(kingdom.arrows)),  size=4, color="black") +
   theme(text=element_text(size=14,color="black"),axis.text=element_text(size=12,color="black"))+
+  theme(text=element_text(size=14,color="black"),axis.text=element_text(size=12,color="black"))+
+  theme(
+    text = element_text(size = 14, color = "black"),
+    axis.text = element_text(size = 12, color = "black"),
+    axis.title = element_text(size = 14, color = "black")  # 軸ラベルを追加
+  ) +
+  labs(
+    x = "NMDS1",  # x軸ラベル
+    y = "NMDS2"   # y軸ラベル
+  ) +
   coord_fixed()
 
 # Save
-ggsave(file = "ITS_scores_only_0226.png")
+ggsave(file = "ITS_TWINSPAN_only_scores_241211.png")
 
 # without_words
 rate = 1 # how many times shorter than acctual arrows
 ggplot()+
-  geom_point(data=data, aes(x=MDS1,y=MDS2, color = site, shape=tree),size=5)+
+  geom_point(data=data, aes(x=MDS1,y=MDS2, color = type),size=5)+
   scale_color_brewer(palette = "Set2")+
   geom_segment(data=env.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate* (1 - pval)), yend = (NMDS2*rate* (1 - pval))), arrow = arrow(length = unit(0.3,"cm")),color="black")+
   # geom_segment(data=kingdom.arrows, aes(x = 0, y = 0, xend = (NMDS1*rate), yend = (NMDS2*rate)), arrow = arrow(length = unit(0.3,"cm")),color="black")+
   # geom_text_repel(data=kingdom.arrows, aes(x=(NMDS1*rate), y=(NMDS2*rate), label=rownames(kingdom.arrows)),  size=4, color="black") +
   theme(text=element_text(size=14,color="black"),axis.text=element_text(size=12,color="black"))+
+  theme(text=element_text(size=14,color="black"),axis.text=element_text(size=12,color="black"))+
+  theme(
+    text = element_text(size = 14, color = "black"),
+    axis.text = element_text(size = 12, color = "black"),
+    axis.title = element_text(size = 14, color = "black")  # 軸ラベルを追加
+  ) +
+  labs(
+    x = "NMDS1",  # x軸ラベル
+    y = "NMDS2"   # y軸ラベル
+  ) +
   coord_fixed()
 
 # Save
-ggsave(file = "ITS_scores_only_without_words_0226.png")
+ggsave(file = "ITS_TWINSPAN_only_scores_without_words.png")
 
 #view a stress score
 nmds$stress
@@ -472,5 +549,4 @@ bind <- cbind(Fval, R2, Pval)
 rownames (bind) <- rownames(adonis[[1]])                 
 
 write.csv (bind, "PerMANOVA.csv")
-
 
