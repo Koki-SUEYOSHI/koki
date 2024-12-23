@@ -281,10 +281,11 @@ taxonomy <- data.frame(lapply(taxonomy, function(x){gsub(pattern="s__", replacem
 rownames(taxonomy) <- rownames(ASV)  # 行名を元の行名で設定
 
 # グループごとの行名を定義
-group_A <- c(25, 26, 27, 28, 29, 42, 44, 45, 48, 49, 53, 54, 55, 59, 61)
-group_B <- c(38, 39, 40, 41, 65, 66)
-group_C <- c(31, 32, 52, 57, 63, 67, 68)
-group_D <- c(33, 50, 51, 58)
+# グループごとの行名を定義
+group_A <- c(25, 26, 27, 28, 29, 31, 32, 33, 42, 48, 49, 50, 51, 52, 58, 67, 68)
+group_B <- c(53, 54, 55, 57, 59, 61)
+group_C <- c(38, 40, 41, 65, 66)
+group_D <- c(39, 44, 45, 63)
 
 # `CSM_` を付けて行名を作成
 rownames_A <- paste0("CSM_", sprintf("%02d", group_A))
